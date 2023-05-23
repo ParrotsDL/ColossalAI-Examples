@@ -17,9 +17,16 @@ from colossalai.utils.timer import MultiTimer
 from colossalai.zero.init_ctx import ZeroInitContext
 from colossalai.pipeline.pipelinable import PipelinableContext
 from titans.loss.lm_loss import GPTLMLoss
+# from titans.model.gpt import GPTLMLoss
+import subprocess
 
 from dataset.webtext import WebtextDataset
 
+from contextlib import contextmanager
+
+@contextmanager
+def nullcontext(enter_result=None):
+    yield enter_result
 
 def calc_local_model_size(model: torch.nn.Module):
     numel_per_device = 0
@@ -33,10 +40,19 @@ def main():
     parser.add_argument('--from_torch', default=False, action='store_true')
     args = parser.parse_args()
     disable_existing_loggers()
+    node_list = os.environ['SLURM_NODELIST']
+    addr = subprocess.getoutput(f'scontrol show hostname {node_list} | head -n1')
+    args.local_rank = int(os.environ['SLURM_LOCALID'])
+    args.rank = int(os.environ['SLURM_PROCID'])
+    args.host = addr
+
+    print(args)
+    # import pdb
+    # pdb.set_trace()
     if args.from_torch:
         colossalai.launch_from_torch(config=args.config)
     else:
-        colossalai.launch_from_slurm(config=args.config, host=args.host, port=29500, seed=42)
+        colossalai.launch_from_slurm(config=args.config, host=args.host, port=args.port, seed=42, backend='nccl')
 
     logger = get_dist_logger()
 
@@ -55,9 +71,34 @@ def main():
     num_chunks = getattr(gpc.config.model, 'num_chunks', 1)
     use_zero3 = hasattr(gpc.config, 'zero')
 
+    # pipelinable = PipelinableContext()
+    # with pipelinable:
+    #     model = gpc.config.model.pop('type')(**gpc.config.model)
+
+    # def mask_function(attention_mask=None):
+    #     if attention_mask is not None:
+    #         batch_size = gpc.config.BATCH_SIZE // gpc.config.NUM_MICRO_BATCHES
+    #         attention_mask = attention_mask.view(batch_size, -1)
+    #         attention_mask = col_nn.partition_batch(attention_mask)
+    #         attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
+    #         attention_mask = (1.0 - attention_mask) * -10000.0
+    #     return attention_mask
+
+    #     # GPT2_small exec_seq
+    #     # (lyl)TODO: The exec_seq for gpt3 will be added here and to_layer_list should be more friendly to use.
+    # exec_seq = ['embed', mask_function, 'blocks.0', 'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', (mask_function, "front"), \
+    #             'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', 'blocks.11', 'norm', 'head']
+    # pipelinable.to_layer_list(exec_seq)
+    # model = pipelinable.partition(num_chunks, gpc.pipeline_parallel_size,
+    #                                 gpc.get_local_rank(ParallelMode.PIPELINE))
+
+
+    # numel = calc_local_model_size(model)
+
     if not use_pipeline:
-        ctx = contextlib.nullcontext()
+        ctx = nullcontext()
         if use_zero3:
+            print("!!!!!!!!!!!!!!!!!!!!zero3")
             ctx = ZeroInitContext(target_device=torch.cuda.current_device(),
                                   shard_strategy=gpc.config.zero.model_config.shard_strategy,
                                   shard_param=True)
@@ -69,6 +110,8 @@ def main():
             model = gpc.config.model.pop('type')(**gpc.config.model)
 
         def mask_function(attention_mask=None):
+            # import pdb
+            # pdb.set_trace()
             if attention_mask is not None:
                 batch_size = gpc.config.BATCH_SIZE // gpc.config.NUM_MICRO_BATCHES
                 attention_mask = attention_mask.view(batch_size, -1)
@@ -79,10 +122,60 @@ def main():
 
         # GPT2_small exec_seq
         # (lyl)TODO: The exec_seq for gpt3 will be added here and to_layer_list should be more friendly to use.
-        exec_seq = ['embed', mask_function, 'blocks.0', 'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', (mask_function, "front"), \
-                    'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', 'blocks.11', 'norm', 'head']
+        # exec_seq = ['embed', mask_function, 'blocks.0', 'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', (mask_function, "front"), \
+        #             'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', 'blocks.11', 'norm', 'head']
+        # exec_seq = ['embed', 'blocks.0', 'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', \
+        #             'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', 'norm', 'head']          # gpt2-small
+        # exec_seq = ['embed', 'blocks.0', \
+        #             'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', \
+        #             'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', \
+        #             'blocks.11', 'blocks.12', 'blocks.13', 'blocks.14', 'blocks.15', \
+        #             'blocks.16', 'blocks.17', 'blocks.18', 'blocks.19', 'blocks.20', \
+        #             'blocks.21', 'blocks.22', 'blocks.23', 'blocks.24', 'blocks.25', \
+        #             'blocks.26', 'blocks.27', 'blocks.28', 'blocks.29', 'blocks.30', \
+        #             'blocks.31', 'blocks.32', 'blocks.33', 'blocks.34', 'blocks.35', \
+        #             'blocks.36', 'blocks.37', 'blocks.38', 'blocks.39', 'blocks.40', \
+        #             'blocks.41', 'blocks.42', 'blocks.43', 'blocks.44', 'blocks.45', \
+        #             'blocks.46','norm', 'head'] # gpt2_xl
+        exec_seq = ['embed', 'blocks.0', \
+                    'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', \
+                    'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', \
+                    'blocks.11', 'blocks.12', 'blocks.13', 'blocks.14', 'blocks.15', \
+                    'blocks.16', 'blocks.17', 'blocks.18', 'blocks.19', 'blocks.20', \
+                    'blocks.21', 'blocks.22', 'blocks.23', 'blocks.24', 'blocks.25', \
+                    'blocks.26', 'blocks.27', 'blocks.28', 'blocks.29', 'blocks.30', \
+                    'blocks.31', 'blocks.32', 'blocks.33', 'blocks.34', 'blocks.35', \
+                    'blocks.36', 'blocks.37', 'blocks.38', 'blocks.39', 'blocks.40', \
+                    'blocks.41', 'blocks.42', 'blocks.43', 'blocks.44', 'blocks.45', \
+                    'blocks.46', 'blocks.47', 'blocks.48', 'blocks.49', 'blocks.50', \
+                    'blocks.51', 'blocks.52', 'blocks.53', 'blocks.54', 'blocks.55', \
+                    'blocks.56', 'blocks.57', 'blocks.58', 'blocks.59', 'blocks.60', \
+                    'blocks.61', 'blocks.62', 'norm', 'head'] # gpt2_4B
+        # exec_seq = ['embed', 'blocks.0', \
+        #             'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', \
+        #             'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', \
+        #             'blocks.11', 'blocks.12', 'blocks.13', 'blocks.14', 'blocks.15', \
+        #             'blocks.16', 'blocks.17', 'blocks.18', 'blocks.19', 'blocks.20', \
+        #             'blocks.21', 'blocks.22', 'blocks.23', 'blocks.24', 'blocks.25', \
+        #             'blocks.26', 'blocks.27', 'blocks.28', 'norm', 'head'] # gpt2_6B跑不起来
+        # exec_seq = ['embed', 'blocks.0', \
+        #             'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', \
+        #             'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', \
+        #             'blocks.11', 'blocks.12', 'blocks.13', 'blocks.14', 'blocks.15', \
+        #             'blocks.16', 'blocks.17', 'blocks.18', 'blocks.19', 'blocks.20', \
+        #             'blocks.21', 'blocks.22', 'blocks.23', 'blocks.24', 'blocks.25', \
+        #             'blocks.26', 'blocks.27', 'blocks.28', 'blocks.29', 'blocks.30', \
+        #             'blocks.31', 'blocks.32', 'blocks.33', 'blocks.34', 'blocks.35', \
+        #             'blocks.36', 'blocks.37', 'blocks.38', 'blocks.39', 'blocks.40', \
+        #             'blocks.41', 'blocks.42', 'blocks.43', 'blocks.44', 'blocks.45', \
+        #             'blocks.46', 'blocks.47', 'blocks.48', 'blocks.49', 'blocks.50', \
+        #             'blocks.51', 'blocks.52', 'blocks.53', 'blocks.54', 'blocks.55', \
+        #             'blocks.56', 'blocks.57', 'blocks.58', 'blocks.59', 'blocks.60', \
+        #             'blocks.61', 'blocks.62', 'blocks.63', 'blocks.64', 'blocks.65', \
+        #             'blocks.66', 'blocks.67', 'blocks.68', 'blocks.69', 'blocks.70', \
+        #             'norm', 'head'] # gpt2_8B
         pipelinable.to_layer_list(exec_seq)
-        ctx = contextlib.nullcontext()
+        ctx = nullcontext()
         # (lyl)TODO: Zero context and pipelinable context should be integrated into one context.
         if use_zero3:
             ctx = ZeroInitContext(target_device=torch.cuda.current_device(),
