@@ -71,30 +71,6 @@ def main():
     num_chunks = getattr(gpc.config.model, 'num_chunks', 1)
     use_zero3 = hasattr(gpc.config, 'zero')
 
-    # pipelinable = PipelinableContext()
-    # with pipelinable:
-    #     model = gpc.config.model.pop('type')(**gpc.config.model)
-
-    # def mask_function(attention_mask=None):
-    #     if attention_mask is not None:
-    #         batch_size = gpc.config.BATCH_SIZE // gpc.config.NUM_MICRO_BATCHES
-    #         attention_mask = attention_mask.view(batch_size, -1)
-    #         attention_mask = col_nn.partition_batch(attention_mask)
-    #         attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
-    #         attention_mask = (1.0 - attention_mask) * -10000.0
-    #     return attention_mask
-
-    #     # GPT2_small exec_seq
-    #     # (lyl)TODO: The exec_seq for gpt3 will be added here and to_layer_list should be more friendly to use.
-    # exec_seq = ['embed', mask_function, 'blocks.0', 'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', (mask_function, "front"), \
-    #             'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', 'blocks.11', 'norm', 'head']
-    # pipelinable.to_layer_list(exec_seq)
-    # model = pipelinable.partition(num_chunks, gpc.pipeline_parallel_size,
-    #                                 gpc.get_local_rank(ParallelMode.PIPELINE))
-
-
-    # numel = calc_local_model_size(model)
-
     if not use_pipeline:
         ctx = nullcontext()
         if use_zero3:
@@ -150,7 +126,7 @@ def main():
                     'blocks.46', 'blocks.47', 'blocks.48', 'blocks.49', 'blocks.50', \
                     'blocks.51', 'blocks.52', 'blocks.53', 'blocks.54', 'blocks.55', \
                     'blocks.56', 'blocks.57', 'blocks.58', 'blocks.59', 'blocks.60', \
-                    'blocks.61', 'blocks.62', 'norm', 'head'] # gpt2_4B
+                    'blocks.61', 'blocks.62', 'norm', 'head'] # gpt2_4B\gpt2_13B
         # exec_seq = ['embed', 'blocks.0', \
         #             'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', \
         #             'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', \
@@ -176,6 +152,9 @@ def main():
         #             'norm', 'head'] # gpt2_8B
         pipelinable.to_layer_list(exec_seq)
         ctx = nullcontext()
+
+        model = model.cpu()
+        torch.cuda.empty_cache()
         # (lyl)TODO: Zero context and pipelinable context should be integrated into one context.
         if use_zero3:
             ctx = ZeroInitContext(target_device=torch.cuda.current_device(),
@@ -184,6 +163,7 @@ def main():
         with ctx:
             model = pipelinable.partition(num_chunks, gpc.pipeline_parallel_size,
                                           gpc.get_local_rank(ParallelMode.PIPELINE))
+            model = model.cuda()
 
     if use_zero3:
         numel = ctx.model_numel_tensor.item()
