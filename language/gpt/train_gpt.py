@@ -102,17 +102,6 @@ def main():
         #             'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', 'blocks.11', 'norm', 'head']
         # exec_seq = ['embed', 'blocks.0', 'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', \
         #             'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', 'norm', 'head']          # gpt2-small
-        # exec_seq = ['embed', 'blocks.0', \
-        #             'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', \
-        #             'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', \
-        #             'blocks.11', 'blocks.12', 'blocks.13', 'blocks.14', 'blocks.15', \
-        #             'blocks.16', 'blocks.17', 'blocks.18', 'blocks.19', 'blocks.20', \
-        #             'blocks.21', 'blocks.22', 'blocks.23', 'blocks.24', 'blocks.25', \
-        #             'blocks.26', 'blocks.27', 'blocks.28', 'blocks.29', 'blocks.30', \
-        #             'blocks.31', 'blocks.32', 'blocks.33', 'blocks.34', 'blocks.35', \
-        #             'blocks.36', 'blocks.37', 'blocks.38', 'blocks.39', 'blocks.40', \
-        #             'blocks.41', 'blocks.42', 'blocks.43', 'blocks.44', 'blocks.45', \
-        #             'blocks.46','norm', 'head'] # gpt2_xl
         exec_seq = ['embed', 'blocks.0', \
                     'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', \
                     'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', \
@@ -123,10 +112,21 @@ def main():
                     'blocks.31', 'blocks.32', 'blocks.33', 'blocks.34', 'blocks.35', \
                     'blocks.36', 'blocks.37', 'blocks.38', 'blocks.39', 'blocks.40', \
                     'blocks.41', 'blocks.42', 'blocks.43', 'blocks.44', 'blocks.45', \
-                    'blocks.46', 'blocks.47', 'blocks.48', 'blocks.49', 'blocks.50', \
-                    'blocks.51', 'blocks.52', 'blocks.53', 'blocks.54', 'blocks.55', \
-                    'blocks.56', 'blocks.57', 'blocks.58', 'blocks.59', 'blocks.60', \
-                    'blocks.61', 'blocks.62', 'norm', 'head'] # gpt2_4B\gpt2_13B
+                    'blocks.46','norm', 'head'] # gpt2_xl\gpt2_10B
+        # exec_seq = ['embed', 'blocks.0', \
+        #             'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', \
+        #             'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', \
+        #             'blocks.11', 'blocks.12', 'blocks.13', 'blocks.14', 'blocks.15', \
+        #             'blocks.16', 'blocks.17', 'blocks.18', 'blocks.19', 'blocks.20', \
+        #             'blocks.21', 'blocks.22', 'blocks.23', 'blocks.24', 'blocks.25', \
+        #             'blocks.26', 'blocks.27', 'blocks.28', 'blocks.29', 'blocks.30', \
+        #             'blocks.31', 'blocks.32', 'blocks.33', 'blocks.34', 'blocks.35', \
+        #             'blocks.36', 'blocks.37', 'blocks.38', 'blocks.39', 'blocks.40', \
+        #             'blocks.41', 'blocks.42', 'blocks.43', 'blocks.44', 'blocks.45', \
+        #             'blocks.46', 'blocks.47', 'blocks.48', 'blocks.49', 'blocks.50', \
+        #             'blocks.51', 'blocks.52', 'blocks.53', 'blocks.54', 'blocks.55', \
+        #             'blocks.56', 'blocks.57', 'blocks.58', 'blocks.59', 'blocks.60', \
+        #             'blocks.61', 'blocks.62', 'norm', 'head'] # gpt2_4B\gpt2_10B\gpt2_13B
         # exec_seq = ['embed', 'blocks.0', \
         #             'blocks.1', 'blocks.2', 'blocks.3', 'blocks.4', 'blocks.5', \
         #             'blocks.6', 'blocks.7', 'blocks.8', 'blocks.9', 'blocks.10', \
